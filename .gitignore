@@ -1,0 +1,4 @@
+tmp/*.png
+.env
+assets/*.ttf
+assets/*.otf
