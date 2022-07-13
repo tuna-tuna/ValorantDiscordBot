@@ -89,14 +89,26 @@ class Local:
                     ylist.append(rankcatmin)
                     continue
                 elif i < 1900:
-                    rankcatmin = "Immortal 1"
+                    rankcatmin = "Ascendant 1"
                     ylist.append(rankcatmin)
                     continue
                 elif i < 2000:
-                    rankcatmin = "Immortal 2"
+                    rankcatmin = "Ascendant 2"
                     ylist.append(rankcatmin)
                     continue
                 elif i < 2100:
+                    rankcatmin = "Ascendant 3"
+                    ylist.append(rankcatmin)
+                    continue
+                elif i < 2200:
+                    rankcatmin = "Immortal 1"
+                    ylist.append(rankcatmin)
+                    continue
+                elif i < 2300:
+                    rankcatmin = "Immortal 2"
+                    ylist.append(rankcatmin)
+                    continue
+                elif i < 2400:
                     rankcatmin = "Immortal 3"
                     ylist.append(rankcatmin)
                     continue
@@ -376,7 +388,7 @@ class Local:
         mapPath = './assets/maps/' + map + '.png'
 
         mapImage: Image.Image = Image.open(mapPath).copy()
-        mapImage = self.scaleToWIdth(mapImage.crop((420, 0, 1500, 1080)), 300).convert('RGBA')
+        mapImage = self.scaleToWidth(mapImage.crop((420, 0, 1500, 1080)), 300).convert('RGBA')
         baseVCTImage.paste(mapImage, (60, 40), mapImage)
 
         blueScore = data["blueScore"]
@@ -421,7 +433,7 @@ class Local:
             #Draw MVPs
             if blueIndex == 0 and playerStat["team"] == 'Blue':
                 #trimming the chara image in certain size and paste it
-                charaImage = self.scaleToWIdth(charaImage, 600)
+                charaImage = self.scaleToWidth(charaImage, 600)
                 charaImage = charaImage.crop((0, 0, 700, 350))
                 baseVCTImage.paste(charaImage, (495, 340), charaImage)
                 kills = str(playerStat["kills"])
@@ -437,7 +449,7 @@ class Local:
                 continue
 
             elif redIndex == 0 and playerStat["team"] == 'Red':
-                charaImage = self.scaleToWIdth(charaImage, 600)
+                charaImage = self.scaleToWidth(charaImage, 600)
                 charaImage = charaImage.crop((0, 0, 700, 350))
                 baseVCTImage.paste(charaImage, (805, 340), charaImage)
                 kills = str(playerStat["kills"])
@@ -454,7 +466,7 @@ class Local:
 
             #Draw others
             elif playerStat["team"] == 'Blue':
-                charaImage = self.scaleToWIdth(charaImage, 400)
+                charaImage = self.scaleToWidth(charaImage, 400)
                 charaImage = charaImage.crop((100, 0, 300, 400))
                 baseVCTImage.paste(charaImage, (leftCharaX[blueIndex], CharaY), charaImage)
                 fixedNameWidth, fixedNameHeight = Draw.textsize(fixedName, font=font)
@@ -464,7 +476,7 @@ class Local:
                 
                 blueIndex += 1
             else:
-                charaImage = self.scaleToWIdth(charaImage, 400)
+                charaImage = self.scaleToWidth(charaImage, 400)
                 charaImage = charaImage.crop((100, 0, 300, 400))
                 baseVCTImage.paste(charaImage, (rightCharaX[redIndex], CharaY), charaImage)
                 fixedNameWidth, fixedNameHeight = Draw.textsize(fixedName, font=font)
@@ -504,7 +516,7 @@ class Local:
         baseVCTImage.save(file_path)
         return file_path
 
-    def scaleToWIdth(self, img: Image.Image, width: int) -> Image.Image:
+    def scaleToWidth(self, img: Image.Image, width: int) -> Image.Image:
         height = round(img.height * width / img.width)
         return img.resize((width, height))
 
