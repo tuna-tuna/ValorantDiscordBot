@@ -3,22 +3,19 @@ import os
 from dotenv import load_dotenv
 
 from utils.fetch import Fetch
-from utils.sheet import Sheet
 
-load_dotenv()
+load_dotenv(override=True)
 
 TOKEN = os.environ['DISCORD_TOKEN']
-LOG_CHANNEL = int(os.environ['DISCORD_LOG_CHANNEL'])
-bot = discord.Bot()
+bot = discord.Bot(intents=discord.Intents.all())
 
-sheet = Sheet()
 fetch = Fetch()
 
 @bot.event
 async def on_ready():
     print('Ready')
-    systemLogChannel = bot.get_channel(LOG_CHANNEL)
-    await fetch.updateRiotId(sheet=sheet, channel=systemLogChannel)
+    systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+    await fetch.updateRiotId(channel=systemLogChannel)
 
 if __name__ == '__main__':
     for file in os.listdir('./cogs'):

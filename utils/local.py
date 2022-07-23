@@ -5,10 +5,12 @@ import os
 import unicodedata
 import discord
 
+load_dotenv(override=True)
+
+
 class Local:
     def __init__(self) -> None:
-        load_dotenv()
-        self.LOG_CHANNEL = int(os.environ['DISCORD_LOG_CHANNEL'])
+        pass
 
     def convertElo(self, yticklist):
         ylist = []
@@ -521,7 +523,30 @@ class Local:
         return img.resize((width, height))
 
     async def onError(self, bot: discord.Bot, funcName: str, exception: Exception) -> None:
-        systemLogChannel = bot.get_channel(self.LOG_CHANNEL)
-        await systemLogChannel.send('Exception occured while executing command: ' + str(funcName))
-        await systemLogChannel.send('Traceback: ' + str(exception))
+        systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+        embed = discord.Embed(title='Error occured', color=discord.Colour.red())
+        embed.add_field(name=f'Error in {funcName}', value=f'```Traceback: \n{exception}```')
+        await systemLogChannel.send(embed=embed)
+        return
+
+    async def onCommand(self, bot: discord.Bot, ctx: discord.ApplicationContext, funcName: str) -> None:
+        systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+        embed = discord.Embed(title='Command Used', color=discord.Colour.brand_green())
+        author_id = ctx.author.id
+        author_name = ctx.author.name
+        try:
+            author_nick = ctx.author.nick
+        except:
+            author_nick = 'None'
+        try:
+            author_avatar_url = ctx.author.avatar.url
+        except:
+            author_avatar_url = None
+        try:
+            guild_name = ctx.guild.name
+        except:
+            guild_name = 'None'
+        embed.set_author(name='Command Log', icon_url=author_avatar_url)
+        embed.add_field(name=funcName + ' used', value=f'```AuthorID: {author_id}\nAuthorName: {author_name}\nAuthorNick: {author_nick}\nGuildName: {guild_name}```')
+        await systemLogChannel.send(embed=embed)
         return

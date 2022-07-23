@@ -1,33 +1,23 @@
 import discord
 from discord.ext import commands, tasks
 from PIL import Image
-from dotenv import load_dotenv
-import datetime
-import os
 from utils.fetch import Fetch
 from utils.local import Local
-from utils.sheet import Sheet
 
 local = Local()
-sheet = Sheet()
 fetch = Fetch()
 
 class Tasks(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
-        load_dotenv()
-        self.LOG_CHANNEL = int(os.environ['DISCORD_LOG_CHANNEL'])
         self.checkMatch.start()
 
     def cog_unload(self) -> None:
         self.checkMatch.cancel()
 
     async def checkMatchTask(self):
-        systemLogChannel = self.bot.get_channel(self.LOG_CHANNEL)
         try:
-            dt_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-            await systemLogChannel.send('checkMatch started. ' + str(dt_now))
-            matchUpdateList = await fetch.searchMatch(sheet)
+            matchUpdateList = await fetch.searchMatch()
             for player in matchUpdateList:
                 if player["update"] == "True":
                     id = player["id"]
@@ -78,8 +68,8 @@ class Tasks(commands.Cog):
                         await channel.send(files=[thumbnail, image], embed=embed)
 
         except Exception as e:
-            await systemLogChannel.send('Exception occured while executing task.')
-            await systemLogChannel.send(str(e))
+            print('Exception occured while executing task.')
+            print(e)
 
     @tasks.loop(seconds=300)
     async def checkMatch(self):

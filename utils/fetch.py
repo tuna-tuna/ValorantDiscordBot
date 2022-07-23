@@ -1,17 +1,20 @@
 import asyncio
+import os
 from typing import Union
 from typing import Optional
 
 import requests
 import aiohttp
-from.sheet import Sheet
+from .db import DataBase
 from decimal import Decimal, ROUND_HALF_UP
+from dotenv import load_dotenv
 
-sheet = Sheet()
+load_dotenv(override=True)
+db = DataBase()
 
 class Fetch:
     def __init__(self) -> None:
-        self.headers = {'Content-type': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.62 Safari/537.36'}
+        self.headers = {'Content-type': 'application/json', 'Authorization': os.environ['APIKEY'], 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.62 Safari/537.36'}
         self.session = aiohttp.ClientSession()
 
     def registerId(self, author_id: str, valo_id: str, valo_tag: str) -> Optional[bool]:
@@ -22,10 +25,7 @@ class Fetch:
         if data["status"] != 200:
             return False
         puuid = data["data"]["puuid"]
-        newSheet = sheet.getSheet(author_id)
-        newSheet.update_acell('A1',valo_id)
-        newSheet.update_acell('B1',valo_tag)
-        newSheet.update_acell('C1',puuid)
+        db.register(author_id, valo_id, valo_tag, puuid)
         return None
 
     async def fetchMatchHistory(self, id: str, tag: str, puuid: str, mode: str) -> dict:
@@ -385,8 +385,8 @@ class Fetch:
         infoList.update(eachPlayerList)
         return infoList
 
-    async def searchMatch(self, sheet: Sheet) -> list:
-        worksheet_list = sheet.workbook.worksheets()
+    async def searchMatch(self) -> list:
+        infolist = db.createInfoList()
         data = None
         compTime = None
         unrTime = None
@@ -397,17 +397,17 @@ class Fetch:
         matchUpdateList = []
         eachPlayerList = {}
         successFlag = True
-        for current in worksheet_list:
-            if current.acell('A2').value == "off":
+        for current in infolist:
+            if current['trackmatch'] == "off":
                 continue
-            elif current.acell('A2').value == "on":
-                id, tag, puuid = sheet.checkStats(current.title)
-                lastMatchId = current.acell('B2').value
-                eachPlayerList["author_id"] = current.title
+            elif current['trackmatch'] == "on":
+                id, tag, puuid = db.checkStats(current['author_id'])
+                lastMatchId = current['lastmatch']
+                eachPlayerList["author_id"] = current['author_id']
                 eachPlayerList["id"] = id
                 eachPlayerList["tag"] = tag
                 eachPlayerList["puuid"] = puuid
-                eachPlayerList["channel_id"] = current.acell('A3').value
+                eachPlayerList["channel_id"] = current['trackchannel']
                 
                 #Competitive
                 await asyncio.sleep(5)
@@ -447,7 +447,7 @@ class Fetch:
                     eachPlayerList["matchid"] = matchId
                     if lastMatchId != matchId:
                         eachPlayerList["update"] = "True"
-                        current.update_acell('B2',matchId)
+                        db.updateLastmatch(current['author_id'], matchId)
                     else:
                         eachPlayerList["update"] = "False"
                     eachPlayerList["mode"] = whichMode
@@ -564,23 +564,12 @@ class Fetch:
         infoList["players"] = playersStatsList
         return infoList
 
-    async def updateRiotId(self, sheet: Sheet, channel) -> None:
+    async def updateRiotId(self, channel) -> None:
         print('Checking riot id...')
         puuidList = []
         authorIdList = []
         updateList = []
-        worksheet_list = sheet.workbook.worksheets()
-        for current in worksheet_list:
-            try:
-                puuid = current.acell('C1').value
-                puuidList.append(puuid)
-                authorIdPuuid = {
-                    "authorId": current.title,
-                    "puuid": puuid
-                }
-                authorIdList.append(authorIdPuuid.copy())
-            except Exception as e:
-                print(e)
+        puuidList, authorIdList = db.createPuuidList()
         async with self.session.put('https://pd.ap.a.pvp.net/name-service/v2/players', json=puuidList) as r:
             data = await r.json(content_type=None)
         for playerData in data:
@@ -588,17 +577,14 @@ class Fetch:
             authorId = ''
             for eachData in authorIdList:
                 if eachData["puuid"] == puuid:
-                    authorId = eachData["authorId"]
+                    authorId = eachData["author_id"]
             playerIds = {
-                "authorId": authorId,
-                "id": playerData["GameName"],
-                "tag": playerData["TagLine"]
+                "author_id": authorId,
+                "gameid": playerData["GameName"],
+                "gametag": playerData["TagLine"]
             }
             updateList.append(playerIds.copy())
-        for playerId in updateList:
-            currentSheet = sheet.getSheet(playerId["authorId"])
-            currentSheet.update_acell('A1', playerId["id"])
-            currentSheet.update_acell('B1', playerId["tag"])
+        db.updateUserData(updateList)
         await channel.send(str(updateList))
         print('Successfully updated Riot IDs')
         return

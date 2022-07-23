@@ -8,15 +8,15 @@ sys.path.append('../')
 
 from utils.fetch import Fetch
 from utils.local import Local
-from utils.sheet import Sheet
+from utils.db import DataBase
 
 import discord
 import matplotlib.pyplot as plt
 from PIL import Image
 
-sheet = Sheet()
 fetch = Fetch()
 local = Local()
+db = DataBase()
 
 guild_ids = [499227608807112724]
 
@@ -29,6 +29,8 @@ class Register(commands.Cog):
         """Riotアカウントを登録することができます"""
         try:
             await ctx.defer(ephemeral = True)
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             exist = fetch.registerId(str(ctx.author.id), str(id), str(tag))
             if exist == False:
                 await ctx.respond('Error! Please try again later.')
@@ -47,7 +49,9 @@ class Stats(commands.Cog):
     async def stats(self, ctx: discord.ApplicationContext):
         """各種スタッツのtrackerへのリンクを表示します"""
         try:
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await ctx.respond('Please register your valorant id and tag before using this command.')
                 return
@@ -78,8 +82,10 @@ class RankPoint(commands.Cog):
         """現在のランクと過去数試合分のランクポイントの変動を見ることができます"""
         try:
             await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             message = await ctx.respond("Fetching data...")
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await message.edit(content='Please register your valorant id and tag before using this command.')
                 return
@@ -143,8 +149,10 @@ class MatchHistory(commands.Cog):
         """コンペティティブマッチの過去数試合分の結果を見ることができます"""
         try:
             await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             message = await ctx.respond("Fetching data...")
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await message.edit(content='Please register your valorant id and tag before using this command.')
                 return
@@ -192,8 +200,10 @@ class MatchHistory(commands.Cog):
         """アンレートマッチの過去数試合分の結果を見ることができます"""
         try:
             await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             message = await ctx.respond("Fetching data...")
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await message.edit(content='Please register your valorant id and tag before using this command.')
                 return
@@ -243,8 +253,10 @@ class MatchHistory(commands.Cog):
         """直近のアンレートまたはコンペティティブマッチの結果を表示します"""
         try:
             await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             message = await ctx.respond("Fetching data...  This may take about 30secs.")
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await message.edit(content='Please register your valorant id and tag before using this command.')
                 return
@@ -298,8 +310,10 @@ class MatchHistory(commands.Cog):
     async def vct(self, ctx: discord.ApplicationContext):
         try:
             await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
             message = await ctx.respond("Fetching data...  This may take about 30secs.")
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await ctx.respond('Please register your valorant id and tag before using this command.')
                 return
@@ -329,11 +343,13 @@ class Others(commands.Cog):
         """このコマンドを実行したチャンネルに、プレイしたマッチの結果が送信されるようになります"""
         try:
             await ctx.defer(ephemeral=True)
-            id, tag, puuid = sheet.checkStats(str(ctx.author.id))
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
             if id == False:
                 await ctx.respond('Please register your valorant id and tag before using this command.')
                 return
-            result = sheet.enableTrack(str(ctx.author.id), toggle, ctx.channel.id)
+            result = db.toggelTrack(str(ctx.author.id), toggle, ctx.channel.id)
             if result == True:
                 await ctx.respond("Your match data will be tracked on this channel.")
             elif result == False:
