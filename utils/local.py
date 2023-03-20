@@ -1,12 +1,8 @@
 from PIL import Image, ImageFont, ImageDraw
 from decimal import ROUND_HALF_UP, Decimal
-from dotenv import load_dotenv
-import os
 import unicodedata
+
 import discord
-
-load_dotenv(override=True)
-
 
 class Local:
     def __init__(self) -> None:
@@ -196,7 +192,8 @@ class Local:
         kdX = 900
         hsrateX = 1000
         econX = 1100
-        fbsX = 1240
+        kastX = 1182
+        fbsX = 1271
         strYUpper = 40 + 75*blueCount
         strYLower = 440 + 75*redCount
         for player in data["players"]:
@@ -213,6 +210,7 @@ class Local:
                 headshots = player["headshots"]
                 legshots = player["legshots"]
                 rank = player["rank"]
+                kast = str(player["kast"])
                 if bodyshots == None:
                     bodyshots = 0
                 if headshots == None:
@@ -253,6 +251,7 @@ class Local:
                 img = self.add_text_to_image(baseScoreboardImage, kd, font_path, font_size, font_color, strYUpper, kdX)
                 img = self.add_text_to_image(baseScoreboardImage, headrate, font_path, font_size, font_color, strYUpper, hsrateX)
                 img = self.add_text_to_image(baseScoreboardImage, str(econ), font_path, font_size, font_color, strYUpper, econX)
+                img = self.add_text_to_image(baseScoreboardImage, str(kast), font_path, font_size, font_color, strYUpper, kastX)
                 img = self.add_text_to_image(baseScoreboardImage, str(fbs), font_path, font_size, font_color, strYUpper, fbsX)
                 blueCount += 1
             else:
@@ -268,6 +267,7 @@ class Local:
                 headshots = player["headshots"]
                 legshots = player["legshots"]
                 rank = player["rank"]
+                kast = str(player["kast"])
                 if bodyshots == None:
                     bodyshots = 0
                 if headshots == None:
@@ -308,6 +308,7 @@ class Local:
                 img = self.add_text_to_image(baseScoreboardImage, kd, font_path, font_size, font_color, strYLower, kdX)
                 img = self.add_text_to_image(baseScoreboardImage, headrate, font_path, font_size, font_color, strYLower, hsrateX)
                 img = self.add_text_to_image(baseScoreboardImage, str(econ), font_path, font_size, font_color, strYLower, econX)
+                img = self.add_text_to_image(baseScoreboardImage, str(kast), font_path, font_size, font_color, strYLower, kastX)
                 img = self.add_text_to_image(baseScoreboardImage, str(fbs), font_path, font_size, font_color, strYLower, fbsX)
                 redCount += 1
             i = i + 1
@@ -390,7 +391,7 @@ class Local:
         mapPath = './assets/maps/' + map + '.png'
 
         mapImage: Image.Image = Image.open(mapPath).copy()
-        mapImage = self.scaleToWidth(mapImage.crop((420, 0, 1500, 1080)), 300).convert('RGBA')
+        mapImage = self.scaleToWIdth(mapImage.crop((420, 0, 1500, 1080)), 300).convert('RGBA')
         baseVCTImage.paste(mapImage, (60, 40), mapImage)
 
         blueScore = data["blueScore"]
@@ -435,7 +436,7 @@ class Local:
             #Draw MVPs
             if blueIndex == 0 and playerStat["team"] == 'Blue':
                 #trimming the chara image in certain size and paste it
-                charaImage = self.scaleToWidth(charaImage, 600)
+                charaImage = self.scaleToWIdth(charaImage, 600)
                 charaImage = charaImage.crop((0, 0, 700, 350))
                 baseVCTImage.paste(charaImage, (495, 340), charaImage)
                 kills = str(playerStat["kills"])
@@ -451,7 +452,7 @@ class Local:
                 continue
 
             elif redIndex == 0 and playerStat["team"] == 'Red':
-                charaImage = self.scaleToWidth(charaImage, 600)
+                charaImage = self.scaleToWIdth(charaImage, 600)
                 charaImage = charaImage.crop((0, 0, 700, 350))
                 baseVCTImage.paste(charaImage, (805, 340), charaImage)
                 kills = str(playerStat["kills"])
@@ -468,7 +469,7 @@ class Local:
 
             #Draw others
             elif playerStat["team"] == 'Blue':
-                charaImage = self.scaleToWidth(charaImage, 400)
+                charaImage = self.scaleToWIdth(charaImage, 400)
                 charaImage = charaImage.crop((100, 0, 300, 400))
                 baseVCTImage.paste(charaImage, (leftCharaX[blueIndex], CharaY), charaImage)
                 fixedNameWidth, fixedNameHeight = Draw.textsize(fixedName, font=font)
@@ -478,7 +479,7 @@ class Local:
                 
                 blueIndex += 1
             else:
-                charaImage = self.scaleToWidth(charaImage, 400)
+                charaImage = self.scaleToWIdth(charaImage, 400)
                 charaImage = charaImage.crop((100, 0, 300, 400))
                 baseVCTImage.paste(charaImage, (rightCharaX[redIndex], CharaY), charaImage)
                 fixedNameWidth, fixedNameHeight = Draw.textsize(fixedName, font=font)
@@ -518,19 +519,19 @@ class Local:
         baseVCTImage.save(file_path)
         return file_path
 
-    def scaleToWidth(self, img: Image.Image, width: int) -> Image.Image:
+    def scaleToWIdth(self, img: Image.Image, width: int) -> Image.Image:
         height = round(img.height * width / img.width)
         return img.resize((width, height))
 
     async def onError(self, bot: discord.Bot, funcName: str, exception: Exception) -> None:
-        systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+        systemLogChannel = bot.get_channel(00000)
         embed = discord.Embed(title='Error occured', color=discord.Colour.red())
         embed.add_field(name=f'Error in {funcName}', value=f'```Traceback: \n{exception}```')
         await systemLogChannel.send(embed=embed)
         return
 
     async def onCommand(self, bot: discord.Bot, ctx: discord.ApplicationContext, funcName: str) -> None:
-        systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+        systemLogChannel = bot.get_channel(00000)
         embed = discord.Embed(title='Command Used', color=discord.Colour.brand_green())
         author_id = ctx.author.id
         author_name = ctx.author.name
@@ -550,3 +551,45 @@ class Local:
         embed.add_field(name=funcName + ' used', value=f'```AuthorID: {author_id}\nAuthorName: {author_name}\nAuthorNick: {author_nick}\nGuildName: {guild_name}```')
         await systemLogChannel.send(embed=embed)
         return
+
+    @staticmethod
+    def calcKast(data, puuid: str):
+        killfeeds = data["kills"]
+        totalRounds: int = data["metadata"]["rounds_played"]
+        roundRemain = []
+        for i in range(totalRounds):
+            roundRemain.append(i)
+        for kill in killfeeds:
+            # check for kill
+            if kill["killer_puuid"] == puuid:
+                if kill["round"] in roundRemain:
+                    roundRemain.remove(kill["round"])
+            # check for assists
+            for assist in kill["assistants"]:
+                if assist["assistant_puuid"] == puuid:
+                    if kill["round"] in roundRemain:
+                        roundRemain.remove(kill["round"])
+        # check for survived
+        surviveCheck = roundRemain.copy()
+        for roundNumber in surviveCheck:
+            isKilled = False
+            for kill in killfeeds:
+                if kill["round"] == roundNumber:
+                    if kill["victim_puuid"] == puuid:
+                        isKilled = True
+            if isKilled == False:
+                roundRemain.remove(roundNumber)
+        # check for traded
+        surviveCheck = roundRemain.copy()
+        for roundNumber in surviveCheck:
+            killTime = 0
+            killer = ""
+            for kill in killfeeds:
+                if kill["round"] == roundNumber:
+                    if kill["victim_puuid"] == puuid:
+                        killTime = kill["kill_time_in_round"]
+                        killer = kill["killer_puuid"]
+                    if killTime != 0 and kill["victim_puuid"] == killer:
+                        if kill["kill_time_in_round"] - killTime < 5000:
+                            roundRemain.remove(roundNumber)
+        return round(float(totalRounds - roundRemain.__len__()) / float(totalRounds) * 100.0)

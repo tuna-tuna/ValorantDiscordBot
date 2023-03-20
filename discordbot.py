@@ -14,8 +14,9 @@ fetch = Fetch()
 @bot.event
 async def on_ready():
     print('Ready')
-    systemLogChannel = bot.get_channel(int(os.environ['DISCORD_LOG_CHANNEL']))
+    systemLogChannel = bot.get_channel(00000)
     await fetch.updateRiotId(channel=systemLogChannel)
+    #await bot.change_presence(activity=discord.Game('VALORANT'), status=discord.Status.online)
 
 if __name__ == '__main__':
     for file in os.listdir('./cogs'):

@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 from PIL import Image
+import datetime
 from utils.fetch import Fetch
 from utils.local import Local
 
@@ -16,7 +17,10 @@ class Tasks(commands.Cog):
         self.checkMatch.cancel()
 
     async def checkMatchTask(self):
+        systemLogChannel = self.bot.get_channel(0000)
         try:
+            dt_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+            #await systemLogChannel.send('checkMatch started. ' + str(dt_now))
             matchUpdateList = await fetch.searchMatch()
             for player in matchUpdateList:
                 if player["update"] == "True":
@@ -68,8 +72,8 @@ class Tasks(commands.Cog):
                         await channel.send(files=[thumbnail, image], embed=embed)
 
         except Exception as e:
-            print('Exception occured while executing task.')
-            print(e)
+            await systemLogChannel.send('Exception occured while executing task.')
+            await systemLogChannel.send(str(e))
 
     @tasks.loop(seconds=300)
     async def checkMatch(self):

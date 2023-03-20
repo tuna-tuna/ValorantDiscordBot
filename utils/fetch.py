@@ -6,6 +6,7 @@ from typing import Optional
 import requests
 import aiohttp
 from .db import DataBase
+from .local import Local
 from decimal import Decimal, ROUND_HALF_UP
 from dotenv import load_dotenv
 
@@ -20,7 +21,7 @@ class Fetch:
     def registerId(self, author_id: str, valo_id: str, valo_tag: str) -> Optional[bool]:
         Url = 'https://api.henrikdev.xyz/valorant/v1/account/' + valo_id + '/' + valo_tag
         r = requests.get(Url, headers=self.headers)
-        data = r.json()
+        data = r.json(content_type=None)
         print(data)
         if data["status"] != 200:
             return False
@@ -36,16 +37,24 @@ class Fetch:
         if mode == 'unrated':
             Url = baseUrl + '?filter=unrated'
         async with self.session.get(Url, headers = self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] == 408:
             async with self.session.get(Url, headers = self.headers) as r:
-                data = await r.json()
+                data = await r.json(content_type=None)
+        return data
+
+    async def fetchMatchRaw(self, matchid: str):
+        url = f'https://api.henrikdev.xyz/valorant/v2/match/{matchid}'
+        async with self.session.get(url, headers=self.headers) as r:
+            data = await r.json(content_type=None)
+        if data["status"] != 200:
+            return False
         return data
 
     async def fetchMMRHistoryFixed(self, id: str, tag: str, puuid: str):
         Url = 'https://api.henrikdev.xyz/valorant/v1/by-puuid/mmr-history/ap/' + puuid
         async with self.session.get(Url, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] != 200:
             return False
         elolist = []
@@ -122,7 +131,7 @@ class Fetch:
         data = {}
         Url = 'https://api.henrikdev.xyz/valorant/v1/raw'
         async with self.session.post(url=Url, data=postdata, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         elolist = []
         rankcatlist = []
         rankpointlist = []
@@ -193,12 +202,12 @@ class Fetch:
     async def fetchCurrentRank(self, id: str, tag: str, puuid: str):
         Url = 'https://api.henrikdev.xyz/valorant/v1/by-puuid/mmr/ap/' + puuid
         async with self.session.get(Url, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] != 200:
             return False
         Url = 'https://valorant-api.com/v1/competitivetiers'
         async with self.session.get(Url, headers=self.headers) as r:
-            data2 = await r.json()
+            data2 = await r.json(content_type=None)
         if data2["status"] != 200:
             return False
         currenttier = data["data"]["currenttier"]
@@ -238,7 +247,7 @@ class Fetch:
     async def fetchPlayerIcon(self, id: str, tag: str) -> Union[bool, str]:
         Url = 'https://api.henrikdev.xyz/valorant/v1/account/' + id + '/' + tag
         async with self.session.get(Url, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] != 200:
             return False
         iconUrl = data["data"]["card"]["small"]
@@ -248,7 +257,7 @@ class Fetch:
         infoList = {}
         Url = 'https://api.henrikdev.xyz/valorant/v2/match/' + matchId
         async with self.session.get(Url, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] != 200:
             return False
         Map = data["data"]["metadata"]["map"]
@@ -459,12 +468,110 @@ class Fetch:
     async def fetchMapImage(self, name: str) -> Union[bool, str]:
         Url = 'https://valorant-api.com/v1/maps'
         async with self.session.get(Url, headers=self.headers) as r:
-            data = await r.json()
+            data = await r.json(content_type=None)
         if data["status"] != 200:
             return False
         for maps in data["data"]:
             if name == maps["displayName"]:
                 return maps["splash"]
+    
+    async def fetchPlayersStatsByMatchId(self, matchid: str, puuid: str) -> Union[bool, dict]:
+        infoList = {}
+        playersStats = {}
+        playersStatsList = []
+        data = await self.fetchMatchRaw(matchid)
+        blueScore = 0
+        redScore = 0
+        if data["status"] != 200:
+            return False
+        match = data["data"]
+        map = match["metadata"]["map"]
+        GameLength = int(Decimal(str(match["metadata"]["game_length"] / 60000)).quantize(Decimal(0), rounding=ROUND_HALF_UP))
+        rounds = match["metadata"]["rounds_played"]
+        #team score
+        blueScore = match["teams"]["blue"]["rounds_won"]
+        redScore = match["teams"]["red"]["rounds_won"]
+        #for each players
+        name = ""
+        tag = ""
+        team = ""
+        eachpuuid = ""
+        chara = ""
+        kills = None
+        deaths = None
+        assists = None
+        bodyshots = None
+        headshots = None
+        legshots = None
+        acs = None
+        moneyspent = None
+        damagemade = None
+        econ = None
+        #for the player
+        score = ""
+        winlose = ""
+        for player in match["players"]["all_players"]:
+            name = player["name"]
+            tag = player["tag"]
+            eachpuuid = player["puuid"]
+            team = player["team"]
+            chara = player["character"]
+            kills = player["stats"]["kills"]
+            deaths = player["stats"]["deaths"]
+            assists = player["stats"]["assists"]
+            bodyshots = player["stats"]["bodyshots"]
+            headshots = player["stats"]["headshots"]
+            legshots = player["stats"]["legshots"]
+            rank = player["currenttier"]
+            if bodyshots == None:
+                bodyshots = 0
+            if headshots == None:
+                headshots = 0
+            if legshots == None:
+                legshots = 0
+            acs = int(Decimal(str(player["stats"]["score"] / rounds)).quantize(Decimal(0), rounding=ROUND_HALF_UP))
+            moneyspent = player["economy"]["spent"]["overall"]
+            damagemade = player["damage_made"]
+            if player["puuid"] == puuid:
+                if match["teams"][team.lower()]["has_won"] == True:
+                    winlose = "Win"
+                else:
+                    winlose = "Lose"
+                if match["teams"][team.lower()]["rounds_won"] == match["teams"][team.lower()]["rounds_lost"]:
+                    winlose = "Draw"
+                score = winlose + '  ' + str(match["teams"][team.lower()]["rounds_won"]) + ' - ' + str(match["teams"][team.lower()]["rounds_lost"])
+                playersStats["winlose"] = winlose
+                playersStats["score"] = score
+            roundCount = 0
+            firstbloods = 0
+            for roundStats in match["kills"]:
+                if roundStats["round"] == roundCount:
+                    roundCount += 1
+                    if roundStats["killer_puuid"] == eachpuuid:
+                        firstbloods += 1
+            playersStats["name"] = name
+            playersStats["tag"] = tag
+            playersStats["team"] = team
+            playersStats["chara"] = chara
+            playersStats["kills"] = kills
+            playersStats["deaths"] = deaths
+            playersStats["assists"] = assists
+            playersStats["bodyshots"] = bodyshots
+            playersStats["headshots"] = headshots
+            playersStats["legshots"] = legshots
+            playersStats["rank"] = rank
+            playersStats["acs"] = acs
+            playersStats["econ"] = round(damagemade / moneyspent * 1000)
+            playersStats["fbs"] = firstbloods
+            playersStats["kast"] = Local.calcKast(match, eachpuuid)
+            playersStatsList.append(playersStats.copy())
+        infoList["map"] = map
+        infoList["gamelength"] = GameLength
+        infoList["blueScore"] = blueScore
+        infoList["redScore"] = redScore
+        playersStatsList.sort(key=lambda x: x["acs"], reverse=True)
+        infoList["players"] = playersStatsList
+        return infoList
 
     async def fetchPlayersStats(self, id: str, tag: str, puuid: str, mode: str) -> Union[bool, dict]:
         infoList = {}
@@ -554,6 +661,7 @@ class Fetch:
                 playersStats["acs"] = acs
                 playersStats["econ"] = round(damagemade / moneyspent * 1000)
                 playersStats["fbs"] = firstbloods
+                playersStats["kast"] = Local.calcKast(match, eachpuuid)
                 playersStatsList.append(playersStats.copy())
             break
         infoList["map"] = map

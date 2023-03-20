@@ -9,6 +9,7 @@ sys.path.append('../')
 from utils.fetch import Fetch
 from utils.local import Local
 from utils.db import DataBase
+from utils.buttons import MatchButton
 
 import discord
 import matplotlib.pyplot as plt
@@ -17,8 +18,6 @@ from PIL import Image
 fetch = Fetch()
 local = Local()
 db = DataBase()
-
-guild_ids = [499227608807112724]
 
 class Register(commands.Cog):
     def __init__(self, bot) -> None:
@@ -124,14 +123,14 @@ class RankPoint(commands.Cog):
             for i in range(0,elolen):
                 text = str(rankcatlist[i]) + '\n' + str(rankpointlist[i])
                 ax.text(i + 1, elolist[i] + ((elomax - elomin) / 20), text, horizontalalignment="center", verticalalignment="center")
-            fig.savefig("./tmp/test.png")
+            fig.savefig(f"./tmp/{str(ctx.author.id)}.png")
             iconUrl = await fetch.fetchPlayerIcon(id, tag)
             rankstr, currentrankimage, color = await fetch.fetchCurrentRank(id, tag, puuid)
-            file = discord.File("./tmp/test.png", filename="test.png")
+            file = discord.File(f"./tmp/{str(ctx.author.id)}.png", filename=f"{str(ctx.author.id)}.png")
             titleStr = id + '#' + tag + '\'s Rank Point History'
             embed = discord.Embed(color=color)
             embed.set_author(name = titleStr, icon_url=iconUrl)
-            embed.set_image(url="attachment://test.png")
+            embed.set_image(url=f"attachment://{str(ctx.author.id)}.png")
             embed.add_field(name="Current Rank",value=rankstr)
             embed.set_thumbnail(url=currentrankimage)
             msg = await ctx.fetch_message(message.id)
@@ -164,8 +163,10 @@ class MatchHistory(commands.Cog):
             embed = discord.Embed()
             matchNum = 0
             iconUrl = await fetch.fetchPlayerIcon(id, tag)
+            view = discord.ui.View(timeout=None)
             for matches in data["data"]:
                 metadata = matches["metadata"]
+                matchid = metadata["matchid"]
                 map = metadata["map"]
                 matchid = metadata["matchid"]
                 team = ""
@@ -188,9 +189,11 @@ class MatchHistory(commands.Cog):
                 name = str(matchNum) + '.  ' + winlose + '(' + score + ')' + '  Map: ```' + map + '```  Character: ```' + chara + '```'
                 detailUrl = 'https://tracker.gg/valorant/match/' + matchid + '?handle=' + id + '%23' + tag
                 embed.add_field(name=name, value="[Click here to open detail.]({})".format(detailUrl),inline=False)
+                label = str(matchNum) + '. ' + map + ' ' + winlose
+                view.add_item(MatchButton(label=label, matchId=matchid, author_id=ctx.author.id, winlose=winlose))
             embed.add_field(name='\u2800', value="[Click here to view more matches.]({})".format(matchesurl),inline=False)
             msg = await ctx.fetch_message(message.id)
-            await msg.edit(content=None, embed=embed)
+            await msg.edit(content=None, embed=embed, view=view)
         except Exception as e:
             await local.onError(self.bot, sys._getframe().f_code.co_name, e)
             await ctx.respond('Error occured')
@@ -306,33 +309,10 @@ class MatchHistory(commands.Cog):
             await local.onError(self.bot, sys._getframe().f_code.co_name, e)
             await ctx.respond('Error occured')
 
-    @slash_command()
-    async def vct(self, ctx: discord.ApplicationContext):
-        try:
-            await ctx.defer()
-            commandName = sys._getframe().f_code.co_name
-            await local.onCommand(self.bot, ctx, commandName)
-            message = await ctx.respond("Fetching data...  This may take about 30secs.")
-            id, tag, puuid = db.checkStats(str(ctx.author.id))
-            if id == False:
-                await ctx.respond('Please register your valorant id and tag before using this command.')
-                return
-            player = await fetch.searchMatchForPlayer(id, tag, puuid, str(ctx.author.id))
-            scorestats = await fetch.fetchPlayersStats(id, tag, puuid, player["mode"].lower())
-            vctpath = local.makeVCTImage(id,tag, scorestats, str(ctx.author.id))
-            embed = discord.Embed()
-            image = discord.File(vctpath)
-            embed.set_image(url='attachment://' + str(ctx.author.id) + '_vct.png')
-            msg = await ctx.fetch_message(message.id)
-            await msg.edit(content=None, embed=embed, file=image)
-        except Exception as e:
-            await local.onError(self.bot, sys._getframe().f_code.co_name, e)
-            await ctx.respond('Error occured')
-
 class Others(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
-
+        
     @slash_command()
     @discord.option(
         "toggle",
@@ -354,6 +334,29 @@ class Others(commands.Cog):
                 await ctx.respond("Your match data will be tracked on this channel.")
             elif result == False:
                 await ctx.respond("Your match data will no longer be tracked.")
+        except Exception as e:
+            await local.onError(self.bot, sys._getframe().f_code.co_name, e)
+            await ctx.respond('Error occured')
+
+    @slash_command()
+    async def vct(self, ctx: discord.ApplicationContext):
+        try:
+            await ctx.defer()
+            commandName = sys._getframe().f_code.co_name
+            await local.onCommand(self.bot, ctx, commandName)
+            message = await ctx.respond("Fetching data...  This may take about 30secs.")
+            id, tag, puuid = db.checkStats(str(ctx.author.id))
+            if id == False:
+                await ctx.respond('Please register your valorant id and tag before using this command.')
+                return
+            player = await fetch.searchMatchForPlayer(id, tag, puuid, str(ctx.author.id))
+            scorestats = await fetch.fetchPlayersStats(id, tag, puuid, player["mode"].lower())
+            vctpath = local.makeVCTImage(id,tag, scorestats, str(ctx.author.id))
+            embed = discord.Embed()
+            image = discord.File(vctpath)
+            embed.set_image(url='attachment://' + str(ctx.author.id) + '_vct.png')
+            msg = await ctx.fetch_message(message.id)
+            await msg.edit(content=None, embed=embed, file=image)
         except Exception as e:
             await local.onError(self.bot, sys._getframe().f_code.co_name, e)
             await ctx.respond('Error occured')

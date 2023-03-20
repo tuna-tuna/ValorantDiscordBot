@@ -13,10 +13,7 @@ class DataBase():
         data = {
             "gameid": gameid,
             "gametag": gametag,
-            "puuid": puuid,
-            "lastmatch": "",
-            "trackmatch": "off",
-            "trackchannel": ""
+            "puuid": puuid
         }
         self.db.update_one({'author_id': author_id}, {'$set': data}, upsert=True)
 
